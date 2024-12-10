@@ -1,0 +1,326 @@
+import java.util.*;
+
+// Classe para representar um usuário
+class Usuario {
+    private String nome;
+    private String email;
+    private String senha;
+    private List<String> historicoAvaliacoes;
+
+    public Usuario(String nome, String email, String senha) {
+        this.nome = nome;
+        this.email = email;
+        this.senha = senha;
+        this.historicoAvaliacoes = new ArrayList<>();
+    }
+
+    public String getNome() {
+        return nome;
+    }
+
+    public String getEmail() {
+        return email;
+    }
+
+    public boolean autenticar(String senha) {
+        return this.senha.equals(senha);
+    }
+
+    public void adicionarAoHistorico(String marcaAvaliada) {
+        historicoAvaliacoes.add(marcaAvaliada);
+    }
+
+    public List<String> getHistoricoAvaliacoes() {
+        return historicoAvaliacoes;
+    }
+}
+
+// Classe para gerenciar os usuários
+class GerenciadorUsuarios {
+    private Map<String, Usuario> usuarios = new HashMap<>();
+    private Usuario usuarioLogado;
+
+    public void registrarUsuario(String nome, String email, String senha) {
+        if (usuarios.containsKey(email)) {
+            System.out.println("E-mail já cadastrado.");
+            return;
+        }
+        usuarios.put(email, new Usuario(nome, email, senha));
+        System.out.println("Usuário registrado com sucesso!");
+    }
+
+    public boolean login(String email, String senha) {
+        Usuario usuario = usuarios.get(email);
+        if (usuario != null && usuario.autenticar(senha)) {
+            usuarioLogado = usuario;
+            System.out.println("Login bem-sucedido! Bem-vindo, " + usuario.getNome());
+            return true;
+        } else {
+            System.out.println("E-mail ou senha incorretos.");
+            return false;
+        }
+    }
+
+    public void logout() {
+        if (usuarioLogado != null) {
+            System.out.println("Até logo, " + usuarioLogado.getNome() + "!");
+            usuarioLogado = null;
+        } else {
+            System.out.println("Nenhum usuário está logado.");
+        }
+    }
+
+    public Usuario getUsuarioLogado() {
+        return usuarioLogado;
+    }
+}
+
+// Classe para representar uma avaliação
+class Avaliacao {
+    private String usuario;
+    private String comentario;
+    private int nota;
+
+    public Avaliacao(String usuario, String comentario, int nota) {
+        this.usuario = usuario;
+        this.comentario = comentario;
+        this.nota = nota;
+    }
+
+    public int getNota() {
+        return nota;
+    }
+
+    public String getUsuario() {
+        return usuario;
+    }
+
+    public String getComentario() {
+        return comentario;
+    }
+
+    public void mostrarAvaliacao() {
+        System.out.println("Usuário: " + usuario);
+        System.out.println("Nota: " + nota + " | Comentário: " + comentario);
+    }
+}
+
+// Classe para representar uma marca
+class Marca {
+    private String nome;
+    private String categoria;
+    private List<Avaliacao> avaliacoes;
+
+    public Marca(String nome, String categoria) {
+        this.nome = nome;
+        this.categoria = categoria;
+        this.avaliacoes = new ArrayList<>();
+    }
+
+    public String getNome() {
+        return nome;
+    }
+
+    public String getCategoria() {
+        return categoria;
+    }
+
+    public void adicionarAvaliacao(String usuario, String comentario, int nota) {
+        if (nota >= 1 && nota <= 5) {
+            avaliacoes.add(new Avaliacao(usuario, comentario, nota));
+        } else {
+            System.out.println("Nota inválida. Use valores entre 1 e 5.");
+        }
+    }
+
+    public double calcularIndiceConfianca() {
+        if (avaliacoes.isEmpty()) {
+            return 0.0;
+        }
+        int soma = 0;
+        for (Avaliacao avaliacao : avaliacoes) {
+            soma += avaliacao.getNota();
+        }
+        return (double) soma / avaliacoes.size();
+    }
+
+    public void mostrarDetalhes() {
+        System.out.println("Marca: " + nome);
+        System.out.println("Categoria: " + categoria);
+        System.out.println("Índice de Confiança: " + String.format("%.2f", calcularIndiceConfianca()));
+        System.out.println("Avaliações:");
+        for (Avaliacao avaliacao : avaliacoes) {
+            avaliacao.mostrarAvaliacao();
+            System.out.println("----------------------------");
+        }
+    }
+}
+
+// Classe para gerenciar recomendações
+class Recomendador {
+    public static void recomendarMarcas(Usuario usuario, List<Marca> marcas) {
+        if (usuario.getHistoricoAvaliacoes().isEmpty()) {
+            System.out.println("Sem histórico de avaliações para gerar recomendações.");
+            return;
+        }
+
+        System.out.println("Recomendações para " + usuario.getNome() + ":");
+        for (String marcaNome : usuario.getHistoricoAvaliacoes()) {
+            for (Marca marca : marcas) {
+                if (marca.getNome().equalsIgnoreCase(marcaNome)) {
+                    String categoria = marca.getCategoria();
+                    System.out.println("Baseado na categoria '" + categoria + "', você pode gostar de:");
+                    for (Marca outraMarca : marcas) {
+                        if (!outraMarca.getNome().equalsIgnoreCase(marcaNome) &&
+                            outraMarca.getCategoria().equalsIgnoreCase(categoria)) {
+                            System.out.println("- " + outraMarca.getNome());
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+// Classe principal
+public class AvaliacaoDeMarcasApp {
+    private static List<Marca> marcas = new ArrayList<>();
+    private static GerenciadorUsuarios gerenciadorUsuarios = new GerenciadorUsuarios();
+    private static Scanner scanner = new Scanner(System.in);
+
+    public static void main(String[] args) {
+        int opcao;
+
+        do {
+            exibirMenu();
+            opcao = scanner.nextInt();
+            scanner.nextLine(); // Consumir a quebra de linha
+
+            switch (opcao) {
+                case 1:
+                    cadastrarMarca();
+                    break;
+                case 2:
+                    avaliarMarca();
+                    break;
+                case 3:
+                    listarMarcas();
+                    break;
+                case 4:
+                    registrarUsuario();
+                    break;
+                case 5:
+                    realizarLogin();
+                    break;
+                case 6:
+                    gerenciadorUsuarios.logout();
+                    break;
+                case 7:
+                    gerarRecomendacoes();
+                    break;
+                case 8:
+                    System.out.println("Saindo do aplicativo...");
+                    break;
+                default:
+                    System.out.println("Opção inválida. Tente novamente.");
+            }
+        } while (opcao != 8);
+    }
+
+    private static void exibirMenu() {
+        System.out.println("\n=== Avaliação de Marcas ===");
+        System.out.println("1. Cadastrar nova marca");
+        System.out.println("2. Avaliar uma marca");
+        System.out.println("3. Listar marcas e índices de confiança");
+        System.out.println("4. Registrar novo usuário");
+        System.out.println("5. Login de usuário");
+        System.out.println("6. Logout");
+        System.out.println("7. Ver recomendações");
+        System.out.println("8. Sair");
+        System.out.print("Escolha uma opção: ");
+    }
+
+    private static void cadastrarMarca() {
+        System.out.print("Digite o nome da marca: ");
+        String nome = scanner.nextLine();
+        System.out.print("Digite a categoria da marca (ex: tecnologia, moda, alimentos): ");
+        String categoria = scanner.nextLine();
+
+        Marca novaMarca = new Marca(nome, categoria);
+        marcas.add(novaMarca);
+        System.out.println("Marca cadastrada com sucesso!");
+    }
+
+    private static void avaliarMarca() {
+        Usuario usuarioLogado = gerenciadorUsuarios.getUsuarioLogado();
+        if (usuarioLogado == null) {
+            System.out.println("Você precisa estar logado para avaliar marcas.");
+            return;
+        }
+
+        System.out.print("Digite o nome da marca que deseja avaliar: ");
+        String nomeMarca = scanner.nextLine();
+
+        Marca marcaEncontrada = buscarMarca(nomeMarca);
+        if (marcaEncontrada != null) {
+            System.out.print("Dê uma nota para a marca (1 a 5): ");
+            int nota = scanner.nextInt();
+            scanner.nextLine(); // Consumir a quebra de linha
+            System.out.print("Escreva um comentário sobre a marca: ");
+            String comentario = scanner.nextLine();
+
+            marcaEncontrada.adicionarAvaliacao(usuarioLogado.getNome(), comentario, nota);
+            usuarioLogado.adicionarAoHistorico(nomeMarca);
+            System.out.println("Avaliação registrada com sucesso!");
+        } else {
+            System.out.println("Marca não encontrada.");
+        }
+    }
+
+    private static void listarMarcas() {
+        if (marcas.isEmpty()) {
+            System.out.println("Nenhuma marca cadastrada.");
+            return;
+        }
+        for (Marca marca : marcas) {
+            marca.mostrarDetalhes();
+            System.out.println("----------------------------");
+        }
+    }
+
+    private static void registrarUsuario() {
+        System.out.print("Digite seu nome: ");
+        String nome = scanner.nextLine();
+        System.out.print("Digite seu e-mail: ");
+        String email = scanner.nextLine();
+        System.out.print("Digite sua senha: ");
+        String senha = scanner.nextLine();
+        gerenciadorUsuarios.registrarUsuario(nome, email, senha);
+    }
+
+    private static void realizarLogin() {
+        System.out.print("E-mail: ");
+        String email = scanner.nextLine();
+        System.out.print("Senha: ");
+        String senha = scanner.nextLine();
+        gerenciadorUsuarios.login(email, senha);
+    }
+
+    private static void gerarRecomendacoes() {
+        Usuario usuarioLogado = gerenciadorUsuarios.getUsuarioLogado();
+        if (usuarioLogado != null) {
+            Recomendador.recomendarMarcas(usuarioLogado, marcas);
+        } else {
+            System.out.println("Você precisa estar logado para ver recomendações.");
+        }
+    }
+
+    private static Marca buscarMarca(String nome) {
+        for (Marca marca : marcas) {
+            if (marca.getNome().equalsIgnoreCase(nome)) {
+                return marca;
+            }
+        }
+        return null;
+    }
+}
